@@ -122,9 +122,10 @@ class VideoFrameCaptionGenerator:
                     T.ToTensor(),
                     T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
                 ])
-                image_tensor = transform(image).unsqueeze(0).to(self.device)
+                # Convert image tensor to bfloat16
+                image_tensor = transform(image).unsqueeze(0).to(self.device, dtype=torch.bfloat16)
 
-                question = "<image>\nPlease describe the image in detail."
+                question = "<image>\\nPlease describe the image shortly."
                 with torch.no_grad():
                     caption = self.model.chat(self.tokenizer, image_tensor, question, dict(max_new_tokens=1024))
 
@@ -160,6 +161,7 @@ class VideoFrameCaptionGenerator:
 
         print(f"Caption generation completed. Results saved to {output_json_path}")
 
+
     def process_videos(self):
         video_files = [f for f in os.listdir(self.video_folder) if f.endswith('.mp4')]
         print(f"Found {len(video_files)} video files")
@@ -176,8 +178,8 @@ if __name__ == "__main__":
         video_folder='/data/ephemeral/home/yunseo_final/dataset/dataset_video_sample',
         frames_folder='/data/ephemeral/home/yunseo_final/dataset/frames',
         output_folder='/data/ephemeral/home/yunseo_final/dataset/output_frame_description',
-        model_name="Salesforce/instructblip-flan-t5-xxl",
-        model_type="blip2",
+        model_name="OpenGVLab/InternVL2_5-4B",
+        model_type="custom",
         frame_rate=2
     )
     generator.process_videos()

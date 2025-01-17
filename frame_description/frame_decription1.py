@@ -1,49 +1,68 @@
 import os
 import cv2
+import yaml
 import json
 import torch
 from tqdm import tqdm
 from PIL import Image
-from transformers import Blip2Processor, Blip2ForConditionalGeneration, AutoModel, AutoTokenizer
+from transformers import (
+    Blip2Processor,
+    Blip2ForConditionalGeneration,
+    AutoModel,
+    AutoTokenizer,
+    QwenImageTokenizer,
+    QwenModelForVisionLanguage,
+    InternVLProcessor,
+    InternVLModel
+)
 from googletrans import Translator
 import datetime
 import torchvision.transforms as T
-from decord import VideoReader, cpu
+
 
 class VideoFrameCaptionGenerator:
-    def __init__(self, video_folder, frames_folder, output_folder, model_name, model_type="blip2", frame_rate=2):
-        self.video_folder = video_folder
-        self.frames_folder = frames_folder
-        self.output_folder = output_folder
-        self.frame_rate = frame_rate
+    def __init__(self, config_path):
+        self._load_config(config_path)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_name = model_name
-        self.model_type = model_type
         self.processor = None
         self.model = None
         self.translator = Translator()
-
         self._load_model()
 
+    def _load_config(self, config_path):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        self.video_folder = config["video_folder"]
+        self.frames_folder = config["frames_folder"]
+        self.output_folder = config["output_folder"]
+        self.model_name = config["model_name"]
+        self.frame_rate = config["frame_rate"]
+
     def _load_model(self):
-        print(f"[INFO] Loading model: {self.model_name} ({self.model_type})")
-        if self.model_type == "blip2":
+        print(f"[INFO] Loading model: {self.model_name}")
+        if "blip2" in self.model_name:
             self.processor = Blip2Processor.from_pretrained(self.model_name)
             self.model = Blip2ForConditionalGeneration.from_pretrained(
                 self.model_name,
                 device_map="auto",
                 torch_dtype=torch.float16
             ).eval().to(self.device)
-        elif self.model_type == "custom":
-            self.model = AutoModel.from_pretrained(
+        elif "InternVL" in self.model_name:
+            self.processor = InternVLProcessor.from_pretrained(self.model_name)
+            self.model = InternVLModel.from_pretrained(
                 self.model_name,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True
+            ).eval().to(self.device)
+        elif "Qwen" in self.model_name:
+            self.tokenizer = QwenImageTokenizer.from_pretrained(self.model_name, trust_remote_code=True)
+            self.model = QwenModelForVisionLanguage.from_pretrained(
+                self.model_name,
+                torch_dtype=torch.float16,
                 trust_remote_code=True
             ).eval().to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, trust_remote_code=True, use_fast=False)
         else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
+            raise ValueError(f"Unsupported model: {self.model_name}")
 
     @staticmethod
     def seconds_to_hms_ms(seconds):
@@ -108,25 +127,28 @@ class VideoFrameCaptionGenerator:
             frame_path = os.path.join(self.frames_folder, frame_file)
             image = Image.open(frame_path).convert('RGB')
 
-            if self.model_type == "blip2":
+            if "blip2" in self.model_name:
                 inputs = self.processor(image, return_tensors="pt").to(self.device)
-
                 with torch.no_grad():
                     out = self.model.generate(**inputs)
-
                 caption = self.processor.decode(out[0], skip_special_tokens=True)
-
-            elif self.model_type == "custom":
-                transform = T.Compose([
-                    T.Resize((448, 448)),
-                    T.ToTensor(),
-                    T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-                ])
-                image_tensor = transform(image).unsqueeze(0).to(self.device)
-
-                question = "<image>\nPlease describe the image in detail."
+            elif "InternVL" in self.model_name:
+                inputs = self.processor(images=image, return_tensors="pt").to(self.device)
                 with torch.no_grad():
-                    caption = self.model.chat(self.tokenizer, image_tensor, question, dict(max_new_tokens=1024))
+                    outputs = self.model.generate(**inputs, max_length=50)
+                caption = self.processor.decode(outputs[0], skip_special_tokens=True)
+            elif "Qwen" in self.model_name:
+                image_tensor = T.ToTensor()(image).unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    response = self.model.chat(
+                        self.tokenizer, 
+                        image_tensor, 
+                        "<image>\nWhat is happening in this image?", 
+                        max_new_tokens=50
+                    )
+                caption = response
+            else:
+                raise ValueError(f"Unsupported model: {self.model_name}")
 
             try:
                 translation = self.translator.translate(caption, dest='ko')
@@ -170,14 +192,7 @@ class VideoFrameCaptionGenerator:
 
         self.generate_captions()
 
-# Example usage
+
 if __name__ == "__main__":
-    generator = VideoFrameCaptionGenerator(
-        video_folder='/data/ephemeral/home/yunseo_final/dataset/dataset_video_sample',
-        frames_folder='/data/ephemeral/home/yunseo_final/dataset/frames',
-        output_folder='/data/ephemeral/home/yunseo_final/dataset/output_frame_description',
-        model_name="Salesforce/instructblip-flan-t5-xxl",
-        model_type="blip2",
-        frame_rate=2
-    )
+    generator = VideoFrameCaptionGenerator(config_path="config.yaml")
     generator.process_videos()

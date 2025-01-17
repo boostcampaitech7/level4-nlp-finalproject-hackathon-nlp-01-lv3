@@ -132,8 +132,22 @@ class VideoFrameCaptionGenerator:
                 with torch.no_grad():
                     out = self.model.generate(**inputs)
                 caption = self.processor.decode(out[0], skip_special_tokens=True)
+<<<<<<< HEAD:frame_description/frame_decription1.py
             elif "InternVL" in self.model_name:
                 inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+=======
+
+            elif self.model_type == "custom":
+                transform = T.Compose([
+                    T.Resize((448, 448)),
+                    T.ToTensor(),
+                    T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+                ])
+                # Convert image tensor to bfloat16
+                image_tensor = transform(image).unsqueeze(0).to(self.device, dtype=torch.bfloat16)
+
+                question = "<image>\\nPlease describe the image shortly."
+>>>>>>> abda2676c50b083fb1759c1d75b9fbaa81cd7e5f:frame_description/frame_decription.py
                 with torch.no_grad():
                     outputs = self.model.generate(**inputs, max_length=50)
                 caption = self.processor.decode(outputs[0], skip_special_tokens=True)
@@ -182,6 +196,7 @@ class VideoFrameCaptionGenerator:
 
         print(f"Caption generation completed. Results saved to {output_json_path}")
 
+
     def process_videos(self):
         video_files = [f for f in os.listdir(self.video_folder) if f.endswith('.mp4')]
         print(f"Found {len(video_files)} video files")
@@ -194,5 +209,16 @@ class VideoFrameCaptionGenerator:
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD:frame_description/frame_decription1.py
     generator = VideoFrameCaptionGenerator(config_path="config.yaml")
+=======
+    generator = VideoFrameCaptionGenerator(
+        video_folder='/data/ephemeral/home/yunseo_final/dataset/dataset_video_sample',
+        frames_folder='/data/ephemeral/home/yunseo_final/dataset/frames',
+        output_folder='/data/ephemeral/home/yunseo_final/dataset/output_frame_description',
+        model_name="OpenGVLab/InternVL2_5-4B",
+        model_type="custom",
+        frame_rate=2
+    )
+>>>>>>> abda2676c50b083fb1759c1d75b9fbaa81cd7e5f:frame_description/frame_decription.py
     generator.process_videos()

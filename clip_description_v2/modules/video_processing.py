@@ -6,7 +6,7 @@ import torchaudio
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
 from transformers import AutoModel, AutoTokenizer
-
+from modules.audio_processing import transcribe_audio
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=1):

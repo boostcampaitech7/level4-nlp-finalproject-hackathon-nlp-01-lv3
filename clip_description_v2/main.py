@@ -18,6 +18,7 @@ def main():
     max_num_frames = config["max_num_frames"]
     generation_config = config["generation_config"]
     prompts = config["prompts"]
+    final_output_path = config["final_output"]
     
     # Output folder setup
     os.makedirs(folder_name, exist_ok=True)
@@ -90,7 +91,6 @@ def main():
                         })
 
     # 최종 JSON 파일 저장
-    final_output_path = "final_output_2.json"
     with open(final_output_path, 'w', encoding='utf-8') as json_file:
         json.dump(final_json_data, json_file, ensure_ascii=False, indent=4)
 

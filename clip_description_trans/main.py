@@ -18,7 +18,7 @@ def main():
     mm_llm_compress = config["mm_llm_compress"]
     max_num_frames = config["max_num_frames"]
     generation_config = config["generation_config"]
-    prompts = config["prompts"]
+    prompts = config["prompt"]
     final_output_path = config["final_output"]
     
     # Output folder setup
@@ -75,7 +75,7 @@ def main():
 
             # 클립 이름이 스크립트와 매칭될 경우
             if clip_name in script_texts:
-                prompt = prompts["clip_description"]
+                prompt = prompt["clip_prompt_template"]
                 prompt += script_texts[clip_name]
                 
                 output = model.chat(

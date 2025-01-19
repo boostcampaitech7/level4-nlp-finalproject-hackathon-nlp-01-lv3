@@ -18,7 +18,7 @@ def main():
     mm_llm_compress = config["mm_llm_compress"]
     max_num_frames = config["max_num_frames"]
     generation_config = config["generation_config"]
-    prompt = config["prompt"]
+    prompt_config = config["prompt"]
     final_output_path = config["final_output"]
     
     # Output folder setup
@@ -27,7 +27,7 @@ def main():
     # Get video files
     video_files = [file for file in os.listdir(video_dir) if file.endswith(".mp4")]
     #5개만 우선 테스트해봅니다.
-    #video_files = video_files[:5]    
+    video_files = video_files[:5]    
     
     # Initialize model and tokenizer
     model, tokenizer, image_processor = initialize_model(model_path, mm_llm_compress)
@@ -75,13 +75,13 @@ def main():
 
             # 클립 이름이 스크립트와 매칭될 경우
             if clip_name in script_texts:
-                prompt = prompt["clip_prompt_template"]
-                prompt += script_texts[clip_name]
+                clip_prompt = prompt_config["clip_prompt_template"]
+                clip_prompt += script_texts[clip_name]
                 
                 output = model.chat(
                     video_path=video_clip_path,
                     tokenizer=tokenizer,
-                    user_prompt=prompt,
+                    user_prompt=clip_prompt,
                     return_history=False,
                     max_num_frames=max_num_frames,
                     generation_config=generation_config

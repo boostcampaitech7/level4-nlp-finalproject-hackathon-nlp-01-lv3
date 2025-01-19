@@ -42,43 +42,46 @@ def main():
         video_path = os.path.join(video_dir, video_file)
         video_name = os.path.splitext(video_file)[0]  # 비디오 이름 추출
         output_json_path = f"{folder_name}/output_segments_script_{video_name}.json"
-        output_folder = f"output_clips_{video_name}"
         
         # 동영상 처리
         process_video(video_path, output_json_path)
         
         with open(output_json_path, 'r') as file:
             scripts = json.load(file)
+            
+        output_folder = f"output_clips_{video_name}"
 
         # 동영상 클립 분할 실행
         split_video_by_timestamps(video_path, scripts, output_folder)
+        
+        with open(output_json_path, 'r') as f:
+            scripts = json.load(f)
     
         # Format scripts for prompt
-        script_texts = {
-            f"clip_{int(script['clip']):03}": f"[{script['start']} - {script['end']}] {script['text']}\n"
-            for script in scripts
-        }
+        script_texts = {}
+        for script in scripts:
+            script_texts[f"clip_{int(script['clip']):03}"] = script_texts.get(f"clip_{int(script['clip']):03}", "") + \
+                f"[{script['start']} - {script['end']}] {script['text']}\n"
                 
-        # 초기 프롬프트 설정
-        init_prompt = prompts["init_prompt"]
-        init_output, chat_history = model.chat(video_path=video_path, tokenizer=tokenizer, user_prompt=init_prompt, return_history=True, max_num_frames=max_num_frames, generation_config=generation_config)
-
+        
         # 각 비디오 클립 처리
         clip_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".mp4")])
-        for clip_file in tqdm(clip_files, desc=f"Processing clips for {video_file}"):
+        outputs = {}
+        
+        for clip_file in tqdm(clip_files, desc=f"Processing video files"):
             video_clip_path = os.path.join(output_folder, clip_file)
             clip_name = os.path.splitext(clip_file)[0]
 
             # 클립 이름이 스크립트와 매칭될 경우
             if clip_name in script_texts:
-                clip_prompt = prompts["clip_prompt_template"].format(script=script_texts[clip_name])
-
-                output, chat_history = model.chat(
+                prompt = prompts["clip_description"]
+                prompt += script_texts[clip_name]
+                
+                output = model.chat(
                     video_path=video_clip_path,
                     tokenizer=tokenizer,
-                    user_prompt=clip_prompt,
-                    chat_history=chat_history,
-                    return_history=True,
+                    user_prompt=prompt,
+                    return_history=False,
                     max_num_frames=max_num_frames,
                     generation_config=generation_config
                 )

@@ -1,4 +1,4 @@
-video_dir: "/workspace/gs_2/video"
+video_dir: "/workspace/own_dataset_video"
 output_folder: "scene_script"
 model_path: "OpenGVLab/VideoChat-Flash-Qwen2-7B_res224"
 
@@ -13,8 +13,7 @@ generation_config:
   num_beams: 1
 
 prompt:
-  #init_prompt: "The video provides an overall context. Please describe each subsequent video clip based on its content and how it connects to the rest of the video."
   clip_prompt_template: "Describe this video in detail, considering the scripts provided below:\n"
 
 #최종 결과 저장 파일이름 설정
-final_output: "final_output_4.json"
+final_output: "test5.json"

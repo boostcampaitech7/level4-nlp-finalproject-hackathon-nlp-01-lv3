@@ -13,7 +13,10 @@ def initialize_model(model_path='OpenGVLab/VideoChat-Flash-Qwen2-7B_res224', mm_
     """
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     model = AutoModel.from_pretrained(model_path, trust_remote_code=True).half().cuda()
+    image_processor = model.get_vision_tower().image_processor
 
+    #Configure the model
+    mm_llm_compress = False
     if mm_llm_compress:
         model.config.mm_llm_compress = True
         model.config.llm_compress_type = "uniform0_attention"
@@ -21,7 +24,5 @@ def initialize_model(model_path='OpenGVLab/VideoChat-Flash-Qwen2-7B_res224', mm_
         model.config.llm_image_token_ratio_list = [1, 0.75, 0.25]
     else:
         model.config.mm_llm_compress = True
-
-    image_processor = model.get_vision_tower().image_processor
 
     return model, tokenizer, image_processor

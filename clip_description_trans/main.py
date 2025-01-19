@@ -26,6 +26,8 @@ def main():
 
     # Get video files
     video_files = [file for file in os.listdir(video_dir) if file.endswith(".mp4")]
+    #5개만 우선 테스트해봅니다.
+    #video_files = video_files[:5]    
     
     # Initialize model and tokenizer
     model, tokenizer, image_processor = initialize_model(model_path, mm_llm_compress)
@@ -47,12 +49,12 @@ def main():
         process_video(video_path, output_json_path)
         
         with open(output_json_path, 'r') as file:
-            scripts = json.load(file)
+            json_data = json.load(file)
             
-        output_folder = f"output_clips_{video_name}"
+        output_folder = f"clip/output_clips_{video_name}"
 
         # 동영상 클립 분할 실행
-        split_video_by_timestamps(video_path, scripts, output_folder)
+        split_video_by_timestamps(video_path, json_data, output_folder)
         
         with open(output_json_path, 'r') as f:
             scripts = json.load(f)
@@ -62,7 +64,6 @@ def main():
         for script in scripts:
             script_texts[f"clip_{int(script['clip']):03}"] = script_texts.get(f"clip_{int(script['clip']):03}", "") + \
                 f"[{script['start']} - {script['end']}] {script['text']}\n"
-                
         
         # 각 비디오 클립 처리
         clip_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".mp4")])
@@ -89,6 +90,12 @@ def main():
                 # Translate description to Korean
                 translated_description = translator.translate(output, src="en", dest="ko").text
 
+                outputs[clip_name] = {
+                    'script_texts': script_texts[clip_name],
+                    'output': output,
+                    'trans_output':translated_description
+                }
+                
                 # 최종 JSON 데이터에 추가
                 for script in scripts:
                     if f"clip_{script['clip']:03}" == clip_name:

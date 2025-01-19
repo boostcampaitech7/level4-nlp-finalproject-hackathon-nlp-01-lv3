@@ -18,7 +18,7 @@ def main():
     mm_llm_compress = config["mm_llm_compress"]
     max_num_frames = config["max_num_frames"]
     generation_config = config["generation_config"]
-    prompts = config["prompt"]
+    prompt = config["prompt"]
     final_output_path = config["final_output"]
     
     # Output folder setup

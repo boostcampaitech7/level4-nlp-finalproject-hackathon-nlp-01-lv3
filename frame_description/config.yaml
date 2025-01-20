@@ -1,7 +1,0 @@
-{
-    "video_folder": "/path/to/video_folder",
-    "frames_folder": "/path/to/frames_folder",
-    "output_folder": "/path/to/output_folder",
-    "model_name": "OpenGVLab/InternVL2_5-4B", // Options: "Salesforce/instructblip-flan-t5-xxl", "Qwen/Qwen2-VL-7B-Instruct"
-    "frame_rate": 2
-}

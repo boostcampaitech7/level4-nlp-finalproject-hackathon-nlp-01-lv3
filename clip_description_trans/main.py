@@ -5,6 +5,8 @@ from tqdm import tqdm
 from modules.model_utils import initialize_model
 from modules.video_processing import process_video, split_video_by_timestamps
 from googletrans import Translator
+import torch
+
 
 def main():
     # Load configuration from YAML file
@@ -27,7 +29,7 @@ def main():
     # Get video files
     video_files = [file for file in os.listdir(video_dir) if file.endswith(".mp4")]
     #5개만 우선 테스트해봅니다.
-    video_files = video_files[:5]    
+    video_files = video_files[:2]    
     
     # Initialize model and tokenizer
     model, tokenizer, image_processor = initialize_model(model_path, mm_llm_compress)
@@ -86,6 +88,13 @@ def main():
                     max_num_frames=max_num_frames,
                     generation_config=generation_config
                 )
+                
+                # mp4 지우기 
+                if video_file.endswith(".mp4"):
+                    vidoe_id = video_file[:-4]
+                    
+                clip_number = clip_name.split('_')[-1]  # Assuming clip_name includes "_<clip_number>"
+                clip_id = f"{vidoe_id}_{clip_number}"
 
                 # Translate description to Korean
                 translated_description = translator.translate(output, src="en", dest="ko").text
@@ -96,15 +105,20 @@ def main():
                     'trans_output':translated_description
                 }
                 
+                # mp4 지우기 
+                if video_file.endswith(".mp4"):
+                    vidoe_id = video_file[:-4]
+            
                 # 최종 JSON 데이터에 추가
                 for script in scripts:
                     if f"clip_{script['clip']:03}" == clip_name:
                         final_json_data["video_clips_info"].append({
-                            "video_file": video_file,
+                            "video_id": vidoe_id,
                             "start_timestamp": script["start"],
                             "end_timestamp": script["end"],
+                            "clip_id":script["clip"],
                             "clip_description": output,
-                            "translated_description": translated_description,
+                            "clip_description_ko": translated_description,
                             "script": script["text"]
                         })
 

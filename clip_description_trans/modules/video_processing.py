@@ -72,7 +72,7 @@ def split_video_by_timestamps(input_video_path, timestamps, output_folder):
         
         # 클립 저장
         clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
-        print(f"Clip {i+1} saved: {output_path}")
+        #print(f"Clip {i+1} saved: {output_path}")
 
     # 동영상 객체 해제
     video.close()
@@ -85,7 +85,7 @@ def process_video(video_path, output_json_path):
     :param output_json_path: Path to save the output JSON file.
     """
     # Load Whisper model
-    whisper_model = whisper.load_model("large")
+    whisper_model = whisper.load_model("large-v3")
 
     # Extract scene timestamps
     scene_timestamps = extract_scene_timestamps(video_path)

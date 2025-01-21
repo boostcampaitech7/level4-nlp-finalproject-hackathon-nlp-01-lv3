@@ -8,11 +8,11 @@ from transformers import AutoTokenizer, AutoModel
 # 설정
 frame_json_path = "./json/frame_output_v1.json"                # frame version
 clip_json_path = "./json/clip_output_v1.json"                  # clip version
-merged_json_path = "./json/merged_output_v2.json"              # frame+clip merge 저장 위치
-embedding_json_path = "./embedding/emb_v2.json"                # embedding 저장 위치
-input_csv_path = "./test_dataset/own_dataset_trans_v1.csv"     # test dataset 위치
-result_csv_path = "./result/result_v2.csv"                     # retrieve result 저장 위치
-output_score_csv_path = "./result/eval_v2.csv"                 # 평가용 파일 저장 위치
+merged_json_path = "./json/merged_output_v1.json"              # frame+clip merge 저장 위치
+embedding_json_path = "./embedding/emb_v1.json"                # embedding 저장 위치
+input_csv_path = "./test_dataset/own_dataset_v2.csv"           # test dataset 위치
+result_csv_path = "./result/result_v1.csv"                     # retrieve result 저장 위치
+output_score_csv_path = "./result/eval_v1.csv"                 # 평가용 파일 저장 위치
 model_name = "BAAI/bge-m3"                                     # 임베딩 모델
 top_k = 5                                                      # retrieve top k (평가에는 반영하지 않고 result에서 확인용)
 
@@ -136,18 +136,21 @@ def process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k,
         query_embedding = get_query_embedding(query, tokenizer, model, device)
         top_results = search_similar_faiss(query_embedding, index, metadata, top_k)
 
-        results.append({
-            "original_query": query,
-            "video_id": top_results[0]["item"]["video_id"],
-            "start": top_results[0]["item"]["start"],
-            "end": top_results[0]["item"]["end"],
-        })
+        for result in top_results:
+            results.append({
+                "original_query": query,
+                "retrieved_text": result["item"]["description"],
+                "video_id": result["item"]["video_id"],
+                "start": result["item"]["start"],
+                "end": result["item"]["end"],
+                "distance": result["distance"]
+            })
 
     results_df = pd.DataFrame(results)
     results_df.to_csv(result_csv_path, index=False, encoding="utf-8-sig")
     print(f"Results saved to: {result_csv_path}")
 
-def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_path):
+def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_path, top_k=5):
     """
     Evaluate results by comparing with the ground truth.
     """
@@ -164,22 +167,21 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
         if str(ground_truth_video_id).startswith("-"):
             ground_truth_video_id = str(ground_truth_video_id)[1:]
 
-        matching_result = result_data[result_data["original_query"] == row["query"]]
+        matching_results = result_data[result_data["original_query"] == row["query"]].head(top_k)
+
         is_correct = 0
         is_video_id_match = 0
 
-        if not matching_result.empty:
-            result_video_id = matching_result.iloc[0]["video_id"]
-            result_start = matching_result.iloc[0]["start"]
-            result_end = matching_result.iloc[0]["end"]
+        for _, match in matching_results.iterrows():
+            result_video_id = match["video_id"]
+            result_start = match["start"]
+            result_end = match["end"]
 
             if result_video_id == ground_truth_video_id:
                 is_video_id_match = 1
-                if (
-                    ground_truth_start <= result_start <= ground_truth_end
-                    and ground_truth_start <= result_end <= ground_truth_end
-                ):
+                if not (result_end < ground_truth_start or result_start > ground_truth_end):
                     is_correct = 1
+                    break 
 
         scoring_results.append({
             "index": index,
@@ -229,9 +231,10 @@ if __name__ == "__main__":
     clip_data = load_json(clip_json_path)["video_clips_info"]
     merged_data = merge_frame_data(frame_data) + merge_clip_data(clip_data)
     save_json(merged_data, merged_json_path)
+    print(f"Merged json saved to: {merged_json_path}")
 
     generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
 
     process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k, tokenizer, model, device)
 
-    evaluate_results(result_csv_path, input_csv_path, output_score_csv_path)
+    evaluate_results(result_csv_path, input_csv_path, output_score_csv_path, top_k=top_k)

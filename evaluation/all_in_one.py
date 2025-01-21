@@ -14,7 +14,7 @@ input_csv_path = "./test_dataset/own_dataset_v2.csv"           # test dataset �
 result_csv_path = "./result/result_v1.csv"                     # retrieve result 저장 위치
 output_score_csv_path = "./result/eval_v1.csv"                 # 평가용 파일 저장 위치
 model_name = "BAAI/bge-m3"                                     # 임베딩 모델
-top_k = 5                                                      # retrieve top k (평가에는 반영하지 않고 result에서 확인용)
+top_k = 5                                                      # retrieve top k 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

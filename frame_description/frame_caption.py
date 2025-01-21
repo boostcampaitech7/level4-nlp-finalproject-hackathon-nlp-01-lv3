@@ -7,13 +7,34 @@ import datetime
 from tqdm import tqdm
 from PIL import Image
 from googletrans import Translator
+from torchvision import transforms as T
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
+from transformers import AutoProcessor, AutoModel, AutoImageProcessor, AutoTokenizer
+
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
 # YAML 설정 파일 로드
 def load_config(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
+
+# 이미지 전처리 함수
+def build_transform(input_size):
+    return T.Compose([
+        T.Resize((input_size, input_size)),
+        T.ToTensor(),
+        T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ])
+
+def dynamic_preprocess(image, image_size=448, use_thumbnail=False, max_num=12):
+    transform = build_transform(image_size)
+    images = [transform(image)]
+    if use_thumbnail:
+        thumbnail = image.resize((image_size, image_size))
+        images.append(transform(thumbnail))
+    return torch.stack(images)
 
 # 초 단위를 "HH:MM:SS.s" 형식으로 변환하는 함수
 def seconds_to_hms_ms(seconds):
@@ -55,6 +76,18 @@ def extract_frames(video_path, output_dir, frame_rate):
     cap.release()
     print(f"{video_id}: 추출된 프레임 수 = {saved_count}")
 
+# 파일 이름에서 video_id와 timestamp를 추출하여 정렬
+def extract_video_id_and_timestamp(file_name):
+    # 파일 이름 형식: videoid_timestamp.jpg
+    try:
+        file_base = os.path.splitext(file_name)[0]
+        video_id, timestamp_str = file_base.rsplit('_', 1)
+        timestamp = float(timestamp_str)  # timestamp를 부동소수점으로 변환
+        return video_id, timestamp
+    except (IndexError, ValueError):
+        # 형식이 맞지 않는 경우 video_id를 '', timestamp를 큰 값으로 설정
+        return '', float('inf')
+        
 # main 함수
 def main(config_path):
     # 설정 로드
@@ -64,16 +97,33 @@ def main(config_path):
     frames_folder = config["general"]["frames_folder"]
     output_folder = config["general"]["output_folder"]
     frame_rate = config["general"]["frame_rate"]
+    caption_prompt = config["caption"]["prompt"]
 
     # 모델 로드
-    model_name = config["model"]["blip2_model_name"]
-    torch_dtype = torch.float16 if config["model"]["torch_dtype"] == "float16" else torch.float32
-    processor = Blip2Processor.from_pretrained(model_name)
-    model = Blip2ForConditionalGeneration.from_pretrained(
-        model_name,
-        device_map="auto",
-        torch_dtype=torch_dtype,
-    ).to(device).eval()
+    model_name = config["model"]["model_name"]
+    torch_dtype = torch.float16 if config["model"].get("torch_dtype") == "float16" else torch.float32
+
+    if model_name == "Salesforce/instructblip-flan-t5-xxl":
+        processor = Blip2Processor.from_pretrained(model_name)
+        model = Blip2ForConditionalGeneration.from_pretrained(
+            model_name,
+            device_map="auto",
+            torch_dtype=torch_dtype,
+        ).to(device).eval()
+
+    elif model_name == "OpenGVLab/InternVL2_5-4B":
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device).eval()
+
+    elif model_name == "Qwen/Qwen2-VL-7B-Instruct":
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device).eval()
+
+    else:
+        print(f"지원하지 않는 모델: {model_name}")
+        return
 
     translator = Translator()
     video_files = [f for f in os.listdir(video_folder) if f.endswith(".mp4")]
@@ -87,8 +137,8 @@ def main(config_path):
 
     # 프레임 처리
     frame_files = sorted(
-        [f for f in os.listdir(frames_folder) if f.endswith(".jpg")],
-        key=lambda x: float(x.rsplit("_", 1)[1].split(".")[0])  # timestamp 기준 정렬
+        [f for f in os.listdir(frames_folder) if f.endswith('.jpg')],
+        key=lambda x: extract_video_id_and_timestamp(x)  # video_id -> timestamp 순으로 정렬
     )
     print(f"총 {len(frame_files)}개의 프레임 파일을 발견했습니다.")
 
@@ -97,30 +147,47 @@ def main(config_path):
         frame_path = os.path.join(frames_folder, frame_file)
         image = Image.open(frame_path).convert("RGB")
 
-        inputs = processor(image, return_tensors="pt").to(device)
-        with torch.no_grad():
-            out = model.generate(**inputs)
+        if model_name == "Salesforce/instructblip-flan-t5-xxl":
+            # InstructBLIP 처리
+            inputs = processor(image, return_tensors="pt").to(device)
+            with torch.no_grad():
+                out = model.generate(**inputs)
+            caption = processor.decode(out[0], skip_special_tokens=True)
 
-        caption = processor.decode(out[0], skip_special_tokens=True)
+        elif model_name == "OpenGVLab/InternVL2_5-4B":
+            # InternVL 처리
+            pixel_values = dynamic_preprocess(image, image_size=448).to(device)
+            generation_config = {"max_length": 128}
+            caption = model.chat(tokenizer, pixel_values, caption_prompt, generation_config=generation_config)
 
+        elif model_name == "Qwen/Qwen2-VL-7B-Instruct":
+            # Qwen 처리
+            pixel_values = dynamic_preprocess(image, image_size=448).to(device)
+            caption = model.chat(tokenizer, pixel_values, caption_prompt)
+
+        else:
+            continue
+
+        # 번역 처리
         try:
-            translation = translator.translate(caption, dest=config["translation"]["language"])
-            translation = translation.text
+            translation = translator.translate(caption, dest=config["translation"]["language"]).text
         except Exception as e:
             print(f"번역 실패: {caption}. 오류: {e}")
             translation = ""
 
-        video_id, timestamp = frame_file.rsplit("_", 1)
-        timestamp = seconds_to_hms_ms(float(timestamp.split(".")[0]))
+        # video_id와 timestamp 추출
+        video_id, timestamp = extract_video_id_and_timestamp(frame_file)
+        timestamp_hms = seconds_to_hms_ms(timestamp)
+
+        # 결과 저장
         results.append({
             "video_id": video_id,
-            "timestamp": timestamp,
+            "timestamp": timestamp_hms,
             "frame_image_path": frame_path,
             "caption": caption,
             "caption_ko": translation,
         })
 
-    # JSON 저장
     output_json_path = os.path.join(output_folder, "frame_output_v.json")
     os.makedirs(output_folder, exist_ok=True)
     with open(output_json_path, "w", encoding="utf-8") as f:

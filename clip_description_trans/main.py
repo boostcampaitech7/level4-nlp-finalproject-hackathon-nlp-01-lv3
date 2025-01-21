@@ -27,7 +27,7 @@ def main():
     # Get video files
     video_files = [file for file in os.listdir(video_dir) if file.endswith(".mp4")]
     #5개만 우선 테스트해봅니다.
-    video_files = video_files[:5]    
+    #video_files = video_files[:5]    
     
     # Initialize model and tokenizer
     model, tokenizer, image_processor = initialize_model(model_path, mm_llm_compress)
@@ -76,6 +76,7 @@ def main():
             # 클립 이름이 스크립트와 매칭될 경우
             if clip_name in script_texts:
                 clip_prompt = prompt_config["clip_prompt_template"]
+                #script 추가
                 clip_prompt += script_texts[clip_name]
                 
                 output = model.chat(

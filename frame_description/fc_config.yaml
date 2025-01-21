@@ -1,13 +1,16 @@
 general:
   device: "cuda"  # "cuda" or "cpu"
-  video_folder: "./own_dataset_video"  # 비디오 파일 경로
-  frames_folder: "./own_dataset_video/frames"  # 프레임 저장 경로
-  output_folder: "./own_dataset_video/output"  # 결과 저장 경로
+  video_folder: "./own_dataset_video_test"  # 비디오 파일 경로
+  frames_folder: "./own_dataset_video_test/frames"  # 프레임 저장 경로
+  output_folder: "./own_dataset_video_test/output"  # 결과 저장 경로
   frame_rate: 2  # 초당 추출할 프레임 수
 
 model:
-  blip2_model_name: "Salesforce/instructblip-flan-t5-xxl"
-  torch_dtype: "float16"
+  model_name: "OpenGVLab/InternVL2_5-4B" # 캡셔닝 모델: "Salesforce/instructblip-flan-t5-xxl", "Qwen/Qwen2-VL-7B-Instruct", "OpenGVLab/InternVL2_5-4B"
+  torch_dtype: "float16" # dtype
+
+caption:
+  prompt: "<image>\nPlease describe the image in detail." # 프롬프트
 
 translation:
   language: "ko"  # 번역할 언어

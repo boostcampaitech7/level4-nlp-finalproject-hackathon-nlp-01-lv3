@@ -14,7 +14,7 @@ input_csv_path = "./test_dataset/own_dataset_v2.csv"           # test dataset �
 result_csv_path = "./result/result_v17.2.csv"                     # retrieve result 저장 위치
 output_score_csv_path = "./result/eval_v17.2.csv"                 # 평가용 파일 저장 위치
 model_name = "BAAI/bge-m3"                                     # 임베딩 모델
-top_k = 5                                                      # retrieve top k (평가에는 반영하지 않고 result에서 확인용)
+top_k = 5                                                      # retrieve top k 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -210,7 +210,7 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
     print("\n=== 전체 결과 ===")
     print(f"전체 데이터셋 크기: {total_samples}")
     print(f"Video ID 정답 개수: {video_id_match_count} ({video_id_match_ratio:.2f}%)")
-    print(f"정답 개수: {correct_count} ({correct_ratio:.2f}%)")
+    print(f"정답 개수: {correct_count}/{total_samples} ({correct_ratio:.2f}%)")
 
     type_stats = merged_data.groupby("type").agg(
         total=("type", "size"),

@@ -10,7 +10,7 @@ from modules.audio_processing import transcribe_audio
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import re
 
-def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=1):
+def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=2):
     """
     Extracts scene transition timestamps from a video using PySceneDetect.
 
@@ -73,7 +73,7 @@ def split_video_by_timestamps(input_video_path, timestamps, output_folder):
         
         # 클립 저장
         clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
-        print(f"Clip {i+1} saved: {output_path}")
+        #print(f"Clip {i+1} saved: {output_path}")
 
     # 동영상 객체 해제
     video.close()
@@ -90,10 +90,20 @@ def process_video(video_path, output_json_path):
     :param output_json_path: Path to save the output JSON file.
     """
     # Load Whisper model
-    whisper_model = whisper.load_model("large")
+    whisper_model = whisper.load_model("large-v3")
 
     # Extract scene timestamps
     scene_timestamps = extract_scene_timestamps(video_path)
+
+    # 추가한 빈 부분 채워주는 코드
+    temp = scene_timestamps[0][0] # 가장 최근 end 값 저장
+    scene_timestamps_new = []
+    for start, end in scene_timestamps:
+        if start != temp:
+            scene_timestamps_new.append((temp, start))
+        
+        scene_timestamps_new.append((start, end))
+        temp = end
 
     # Prepare results
     results = []

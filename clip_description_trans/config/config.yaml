@@ -1,8 +1,9 @@
 video_dir: "/workspace/own_dataset_video"
-output_folder: "scene_script"
-model_path: "OpenGVLab/VideoChat-Flash-Qwen2-7B_res224"
+output_folder: "scene_script_llava"
+model_path: "OpenGVLab/VideoChat-Flash-Qwen2-7B_res224" #lmms-lab/LLaVA-Video-7B-Qwen2
 
-#Configure the model -> model_utils.py
+##################################################
+#Configure the model -> videochatflash_model_utils.py
 mm_llm_compress: false 
 
 #Evaluation configuration

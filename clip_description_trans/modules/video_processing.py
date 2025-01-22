@@ -9,7 +9,7 @@ from transformers import AutoModel, AutoTokenizer
 from modules.audio_processing import transcribe_audio
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
-def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=1):
+def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=2):
     """
     Extracts scene transition timestamps from a video using PySceneDetect.
 
@@ -89,6 +89,16 @@ def process_video(video_path, output_json_path):
 
     # Extract scene timestamps
     scene_timestamps = extract_scene_timestamps(video_path)
+
+    # 추가한 빈 부분 채워주는 코드
+    temp = scene_timestamps[0][0] # 가장 최근 end 값 저장
+    scene_timestamps_new = []
+    for start, end in scene_timestamps:
+        if start != temp:
+            scene_timestamps_new.append((temp, start))
+        
+        scene_timestamps_new.append((start, end))
+        temp = end
 
     # Prepare results
     results = []

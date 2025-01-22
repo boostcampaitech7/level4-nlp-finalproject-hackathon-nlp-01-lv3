@@ -6,15 +6,15 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 
 # 설정
-frame_json_path = "./json/frame_output_v1.json"                # frame version
-clip_json_path = "./json/clip_output_v1.json"                  # clip version
-merged_json_path = "./json/merged_output_v1.json"              # frame+clip merge 저장 위치
-embedding_json_path = "./embedding/emb_v1.json"                # embedding 저장 위치
+frame_json_path = "./json/frame_output_v3.json"                # frame version
+clip_json_path = "./json/clip_output_v10.1.json"                  # clip version
+merged_json_path = "./json/merged_output_v17.json"              # frame+clip merge 저장 위치
+embedding_json_path = "./embedding/emb_v17.json"                # embedding 저장 위치
 input_csv_path = "./test_dataset/own_dataset_v2.csv"           # test dataset 위치
-result_csv_path = "./result/result_v1.csv"                     # retrieve result 저장 위치
-output_score_csv_path = "./result/eval_v1.csv"                 # 평가용 파일 저장 위치
+result_csv_path = "./result/result_v17.2.csv"                     # retrieve result 저장 위치
+output_score_csv_path = "./result/eval_v17.2.csv"                 # 평가용 파일 저장 위치
 model_name = "BAAI/bge-m3"                                     # 임베딩 모델
-top_k = 5                                                      # retrieve top k 
+top_k = 5                                                      # retrieve top k (평가에는 반영하지 않고 result에서 확인용)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -63,7 +63,7 @@ def merge_clip_data(clip_data):
     """
     return [
         {
-            "video_id": clip["video_file"].split(".")[0],
+            "video_id": clip["video_id"],
             "scale": "clip",
             "start": clip["start_timestamp"],
             "end": clip["end_timestamp"],
@@ -177,6 +177,9 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
             result_start = match["start"]
             result_end = match["end"]
 
+            if str(result_video_id).startswith("-"):
+                result_video_id = str(result_video_id)[1:]
+
             if result_video_id == ground_truth_video_id:
                 is_video_id_match = 1
                 if not (result_end < ground_truth_start or result_start > ground_truth_end):
@@ -227,6 +230,7 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
 
 
 if __name__ == "__main__":
+    # topk만 바꿀 때 주석 처리 구간
     frame_data = load_json(frame_json_path)
     clip_data = load_json(clip_json_path)["video_clips_info"]
     merged_data = merge_frame_data(frame_data) + merge_clip_data(clip_data)
@@ -234,6 +238,7 @@ if __name__ == "__main__":
     print(f"Merged json saved to: {merged_json_path}")
 
     generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
+    # topk만 바꿀 때 주석 처리 구간
 
     process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k, tokenizer, model, device)
 

@@ -8,6 +8,7 @@ from scenedetect.detectors import ContentDetector
 from transformers import AutoModel, AutoTokenizer
 from modules.audio_processing import transcribe_audio
 from moviepy.video.io.VideoFileClip import VideoFileClip
+import re
 
 def extract_scene_timestamps(video_path, threshold=30.0, min_scene_len=1):
     """
@@ -76,7 +77,11 @@ def split_video_by_timestamps(input_video_path, timestamps, output_folder):
 
     # 동영상 객체 해제
     video.close()
-    
+
+def reduce_repeated_characters(text, max_repeats=5):
+    # 정규식을 사용하여 반복되는 문자를 최대 max_repeats로 줄임
+    return re.sub(r"(.)\1{" + str(max_repeats) + r",}", r"\1" * max_repeats, text)
+
 def process_video(video_path, output_json_path):
     """
     Process the video to extract scene timestamps and transcribe each scene's audio.

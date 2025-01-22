@@ -5,6 +5,10 @@ from tqdm import tqdm
 from modules.model_utils import initialize_model
 from modules.video_processing import process_video, split_video_by_timestamps
 from googletrans import Translator
+import torch
+
+#os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
 
 def main():
     # Load configuration from YAML file
@@ -39,7 +43,7 @@ def main():
     final_json_data = {"video_clips_info": []}
     
     # Process video and save results
-    for video_file in video_files:
+    for video_file in tqdm(video_files):
         # 비디오 경로 및 출력 파일 경로 설정
         video_path = os.path.join(video_dir, video_file)
         video_name = os.path.splitext(video_file)[0]  # 비디오 이름 추출
@@ -62,8 +66,8 @@ def main():
         # Format scripts for prompt
         script_texts = {}
         for script in scripts:
-            script_texts[f"clip_{int(script['clip']):03}"] = script_texts.get(f"clip_{int(script['clip']):03}", "") + \
-                f"[{script['start']} - {script['end']}] {script['text']}\n"
+            script_texts[f"clip_{int(script['clip']):03}"] = script_texts.get(f"clip_{int(script['clip']):03}", "") + f"{script['text']}\n" 
+                #f"[{script['start']} - {script['end']}] {script['text']}\n"
         
         # 각 비디오 클립 처리
         clip_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".mp4")])
@@ -76,7 +80,6 @@ def main():
             # 클립 이름이 스크립트와 매칭될 경우
             if clip_name in script_texts:
                 clip_prompt = prompt_config["clip_prompt_template"]
-                #script 추가
                 clip_prompt += script_texts[clip_name]
                 
                 output = model.chat(
@@ -97,15 +100,21 @@ def main():
                     'trans_output':translated_description
                 }
                 
+                # mp4 지우기 
+                if video_file.endswith(".mp4"):
+                    vidoe_id = video_file[:-4]
+                    
+                 
                 # 최종 JSON 데이터에 추가
                 for script in scripts:
                     if f"clip_{script['clip']:03}" == clip_name:
                         final_json_data["video_clips_info"].append({
-                            "video_file": video_file,
+                            "video_id": vidoe_id,
                             "start_timestamp": script["start"],
                             "end_timestamp": script["end"],
+                            "clip_id":script['clip'],
                             "clip_description": output,
-                            "translated_description": translated_description,
+                            "clip_description_ko": translated_description,
                             "script": script["text"]
                         })
 

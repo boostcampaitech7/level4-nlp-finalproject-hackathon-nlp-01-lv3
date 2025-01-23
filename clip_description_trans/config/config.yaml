@@ -1,6 +1,13 @@
-video_dir: "/workspace/own_dataset_video"
-output_folder: "scene_script_llava"
+#전체 비디오 저장할곳
+video_dir: "/workspace/sjgs/clip_description_trans_final3/video"
+output_folder: "scene_script"
+#클립저장할곳 지정
+clip_output_directory: "/worksapce/sjgs/clip_description_trans_final3/full_clips"
+#모델 지정
 model_path: "OpenGVLab/VideoChat-Flash-Qwen2-7B_res224" #lmms-lab/LLaVA-Video-7B-Qwen2
+#타임스탬프파일
+timestamp_file: "/workspace/sjgs/clip_description_trans_final3/video_timestamps.txt"
+
 
 ##################################################
 #Configure the model -> videochatflash_model_utils.py
@@ -12,9 +19,10 @@ generation_config:
   do_sample: false
   max_new_tokens: 256
   num_beams: 1
+##################################################
 
 prompt:
-  clip_prompt_template: "Describe this video in detail."
+  clip_prompt_template: "Describe the clip by focusing on the actions and motions taking place. Clearly explain the specific actions being performed and the movements occurring in the video. Avoid including unnecessary details about the setting or emotions unless they directly influence the behavior or actions. Provide a step-by-step, concise, and clear description of what is happening."
 
 #최종 결과 저장 파일이름 설정
-final_output: "clip_output_v1.json"
+final_output: "clip_output_v19.json"

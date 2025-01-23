@@ -8,13 +8,13 @@ from transformers import AutoTokenizer, AutoModel
 # 설정
 frame_json_path = "./json/frame_output_v3.json"                # frame version
 clip_json_path = "./json/clip_output_v10.1.json"                  # clip version
-merged_json_path = "./json/merged_output_v17.json"              # frame+clip merge 저장 위치
-embedding_json_path = "./embedding/emb_v17.json"                # embedding 저장 위치
+merged_json_path = "./json/merged_output_v5.json"              # frame+clip merge 저장 위치
+embedding_json_path = "./embedding/emb_v5.json"                # embedding 저장 위치
 input_csv_path = "./test_dataset/own_dataset_v2.csv"           # test dataset 위치
-result_csv_path = "./result/result_v17.2.csv"                     # retrieve result 저장 위치
-output_score_csv_path = "./result/eval_v17.2.csv"                 # 평가용 파일 저장 위치
+result_csv_path = "./result/result_v5.csv"                     # retrieve result 저장 위치
+output_score_csv_path = "./result/eval_v5.csv"                 # 평가용 파일 저장 위치
 model_name = "BAAI/bge-m3"                                     # 임베딩 모델
-top_k = 5                                                      # retrieve top k 
+top_k = 1                                                      # retrieve top k 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -231,13 +231,13 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
 
 if __name__ == "__main__":
     # topk만 바꿀 때 주석 처리 구간
-    frame_data = load_json(frame_json_path)
-    clip_data = load_json(clip_json_path)["video_clips_info"]
-    merged_data = merge_frame_data(frame_data) + merge_clip_data(clip_data)
-    save_json(merged_data, merged_json_path)
-    print(f"Merged json saved to: {merged_json_path}")
+    # frame_data = load_json(frame_json_path)
+    # clip_data = load_json(clip_json_path)["video_clips_info"]
+    # merged_data = merge_frame_data(frame_data) + merge_clip_data(clip_data)
+    # save_json(merged_data, merged_json_path)
+    # print(f"Merged json saved to: {merged_json_path}")
 
-    generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
+    # generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
     # topk만 바꿀 때 주석 처리 구간
 
     process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k, tokenizer, model, device)

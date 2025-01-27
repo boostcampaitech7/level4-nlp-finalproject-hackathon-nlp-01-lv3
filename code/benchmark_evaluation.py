@@ -14,7 +14,7 @@ config_path = "./config.yaml"
 config = load_config(config_path)
 
 frame_json_path = config["paths"]["frame_json_path"]
-clip_json_path = config["paths"]["clip_json_path"]
+scene_json_path = config["paths"]["scene_json_path"]
 merged_json_path = config["paths"]["merged_json_path"]
 embedding_json_path = config["paths"]["embedding_json_path"]
 input_csv_path = config["paths"]["input_csv_path"]
@@ -65,19 +65,19 @@ def merge_frame_data(frame_data):
         for frame in frame_data
     ]
 
-def merge_clip_data(clip_data):
+def merge_scene_data(scene_data):
     """
-    Convert clip data to the desired format.
+    Convert scene data to the desired format.
     """
     return [
         {
-            "video_id": clip["video_id"],
-            "scale": "clip",
-            "start": clip["start_timestamp"],
-            "end": clip["end_timestamp"],
-            "description": clip["clip_description"],
+            "video_id": scene["video_id"],
+            "scale": "scene",
+            "start": scene["start_timestamp"],
+            "end": scene["end_timestamp"],
+            "description": scene["scene_description"],
         }
-        for clip in clip_data
+        for scene in scene_data
     ]
 
 def get_embeddings(text, tokenizer, model, device):
@@ -240,8 +240,8 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
 if __name__ == "__main__":
     # topk만 바꿀 때 주석 처리 구간
     frame_data = load_json(frame_json_path)
-    clip_data = load_json(clip_json_path)["video_clips_info"]
-    merged_data = merge_frame_data(frame_data) + merge_clip_data(clip_data)
+    scene_data = load_json(scene_json_path)["video_scenes_info"]
+    merged_data = merge_frame_data(frame_data) + merge_scene_data(scene_data)
     save_json(merged_data, merged_json_path)
     print(f"Merged json saved to: {merged_json_path}")
 

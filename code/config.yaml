@@ -1,6 +1,6 @@
 paths:
   frame_json_path: "./json/frame_output_v3.json"
-  clip_json_path: "./json/clip_output_v10.1.json"
+  scene_json_path: "./json/scene_output_v10.1.json"
   merged_json_path: "./json/merged_output_v5.json"
   embedding_json_path: "./embedding/emb_v5.json"
   input_csv_path: "./test_dataset/own_dataset_v2.csv"

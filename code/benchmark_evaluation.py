@@ -238,16 +238,29 @@ def evaluate_results(result_csv_path, ground_truth_csv_path, output_score_csv_pa
 
 
 if __name__ == "__main__":
-    # topk만 바꿀 때 주석 처리 구간
-    frame_data = load_json(frame_json_path)
-    scene_data = load_json(scene_json_path)["video_scenes_info"]
-    merged_data = merge_frame_data(frame_data) + merge_scene_data(scene_data)
-    save_json(merged_data, merged_json_path)
-    print(f"Merged json saved to: {merged_json_path}")
+    start_stage = config["settings"]["start_stage"] 
 
-    generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
-    # topk만 바꿀 때 주석 처리 구간
+    if start_stage == "merge":
+        frame_data = load_json(frame_json_path)
+        scene_data = load_json(scene_json_path)["video_scenes_info"]
+        merged_data = merge_frame_data(frame_data) + merge_scene_data(scene_data)
+        save_json(merged_data, merged_json_path)
+        print(f"Merged json saved to: {merged_json_path}")
 
-    process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k, tokenizer, model, device)
+    if start_stage in ["embedding", "retrieving", "evaluation"]:
+        print("Skipping merge stage.")
 
-    evaluate_results(result_csv_path, input_csv_path, output_score_csv_path, top_k=top_k)
+    if start_stage in ["embedding"]:
+        generate_embeddings(merged_json_path, embedding_json_path, tokenizer, model, device)
+
+    if start_stage in ["retrieving", "evaluation"]:
+        print("Skipping embedding stage.")
+
+    if start_stage in ["retrieving"]:
+        process_queries(input_csv_path, embedding_json_path, result_csv_path, top_k, tokenizer, model, device)
+
+    if start_stage in ["evaluation"]:
+        print("Skipping retrieving stage.")
+
+    if start_stage == "evaluation":
+        evaluate_results(result_csv_path, input_csv_path, output_score_csv_path, top_k=top_k)

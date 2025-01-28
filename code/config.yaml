@@ -7,6 +7,7 @@ paths:
   result_csv_path: "./result/result_v5.csv"
   output_score_csv_path: "./result/eval_v5.csv"
 
-settings:
+ettings:
   model_name: "BAAI/bge-m3"
   top_k: 1
+  start_stage: "merge"  # [merge, embedding, retrieving, evaluation]
